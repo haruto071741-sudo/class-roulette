@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>名前抽選システム</title>
+    <style>
+        :root {
+            --primary-color: #4f46e5;
+            --primary-hover: #4338ca;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-color: #1e293b;
+            --border-color: #e2e8f0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 750px;
+            background: var(--card-bg);
+            border-radius: 16px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            position: relative;
+            margin: 20px;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border-color);
+            background: #fff;
+        }
+
+        h1 {
+            font-size: 20px;
+            margin: 0;
+            color: var(--primary-color);
+        }
+
+        .hamburger-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-color);
+            padding: 4px 8px;
+            border-radius: 8px;
+            transition: background 0.2s;
+        }
+        .hamburger-btn:hover {
+            background: #f1f5f9;
+        }
+
+        .screen {
+            display: none;
+            padding: 24px;
+        }
+        .screen.active {
+            display: block;
+        }
+
+        .table-container {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 14px;
+        }
+
+        th, td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background: #f1f5f9;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+
+        /* 除外行のスタイル（グレーアウト＋取り消し線） */
+        tr.exclude-row {
+            background-color: #f1f5f9 !important;
+        }
+        tr.exclude-row td {
+            color: #94a3b8 !important;
+            text-decoration: line-through;
+        }
+
+        .table-actions {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            font-size: 14px;
+            color: #64748b;
+        }
+
+        .btn-text {
+            background: none;
+            border: none;
+            color: var(--primary-color);
+            cursor: pointer;
+            padding: 0;
+            font-size: 14px;
+        }
+        .btn-text:hover {
+            text-decoration: underline;
+        }
+
+        .btn-primary {
+            width: 100%;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 14px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-primary:hover {
+            background-color: var(--primary-hover);
+        }
+        .btn-primary:disabled {
+            background-color: #cbd5e1;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background-color: #e2e8f0;
+            color: var(--text-color);
+            border: none;
+            padding: 10px 16px;
+            font-size: 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-bottom: 16px;
+        }
+        .btn-secondary:hover {
+            background-color: #cbd5e1;
+        }
+
+        .lottery-box {
+            text-align: center;
+            padding: 30px 0;
+        }
+
+        #roulette-display {
+            font-size: 42px;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin: 20px 0;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .settings-info {
+            font-size: 13px;
+            color: #64748b;
+            margin-bottom: 15px;
+            background: #f1f5f9;
+            padding: 10px;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* ハンバーガーメニュー */
+        .drawer-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            display: none;
+            z-index: 100;
+        }
+        .drawer {
+            position: fixed;
+            top: 0; right: -320px; width: 300px; height: 100%;
+            background: white;
+            box-shadow: -5px 0 15px rgba(0,0,0,0.1);
+            transition: right 0.3s ease;
+            z-index: 101;
+            padding: 24px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+        }
+        .drawer.open {
+            right: 0;
+        }
+        .drawer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 12px;
+        }
+        .drawer-header h2 {
+            font-size: 18px;
+            margin: 0;
+        }
+        .close-drawer {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        .setting-item {
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .setting-item label {
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .setting-sub {
+            font-size: 11px;
+            color: #64748b;
+            margin-top: 2px;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 44px; height: 24px;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute; cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #cbd5e1; transition: .3s; border-radius: 24px;
+        }
+        .slider:before {
+            position: absolute; content: "";
+            height: 18px; width: 18px; left: 3px; bottom: 3px;
+            background-color: white; transition: .3s; border-radius: 50%;
+        }
+        input:checked + .slider { background-color: var(--primary-color); }
+        input:checked + .slider:before { transform: translateX(20px); }
+
+        .input-count {
+            width: 60px;
+            padding: 6px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            font-size: 16px;
+            text-align: center;
+        }
+
+        /* ポップアップ */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: none; justify-content: center; align-items: center;
+            z-index: 200;
+        }
+        .modal-card {
+            background: white; padding: 30px; border-radius: 16px; text-align: center; max-width: 500px; width: 90%;
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            max-height: 85vh;
+            display: flex;
+            flex-direction: column;
+        }
+        @keyframes popIn {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .modal-card h3 { margin-top: 0; color: #64748b; font-size: 16px; flex-shrink: 0; }
+        .modal-result { 
+            font-size: 26px; 
+            font-weight: bold; 
+            color: var(--primary-color); 
+            margin: 20px 0; 
+            overflow-y: auto; 
+            flex-grow: 1;
+            line-height: 1.6;
+            word-break: keep-all;
+        }
+
+        /* 履歴 */
+        .history-section {
+            margin-top: 24px; border-top: 1px solid var(--border-color); padding-top: 16px;
+        }
+        .history-section h3 { font-size: 15px; margin-bottom: 8px; }
+        .history-list {
+            max-height: 120px; overflow-y: auto; font-size: 13px; color: #475569; background: #f8fafc; padding: 8px; border-radius: 6px; text-align: left;
+        }
+        .history-item { padding: 4px 0; border-bottom: 1px solid #e2e8f0; }
+        .history-item:last-child { border-bottom: none; }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <header>
+        <h1 id="header-title">名簿選択（抽選準備）</h1>
+        <button class="hamburger-btn" onclick="toggleDrawer(true)">☰</button>
+    </header>
+
+    <!-- 画面1：名簿・除外選択画面 -->
+    <div id="screen-roster" class="screen active">
+        <p style="font-size: 14px; color: #64748b; margin-top: 0;">
+            抽選から**除外したい人**にチェック（✔️）を入れてください。
+        </p>
+
+        <div class="table-actions">
+            <div>
+                <span id="active-count">有効な候補者: 0人</span>
+                (<span id="total-count">全0人</span>)
+            </div>
+            <div>
+                <button class="btn-text" onclick="selectAll(false)">すべて選択解除</button> | 
+                <button class="btn-text" onclick="selectAll(true)">すべて除外</button>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 50px; text-align: center;">除外</th>
+                        <th>名前</th>
+                    </tr>
+                </thead>
+                <tbody id="roster-tbody"></tbody>
+            </table>
+        </div>
+
+        <button class="btn-primary" onclick="goToLotteryScreen()">抽選画面へ進む ➔</button>
+    </div>
+
+    <!-- 画面2：抽選画面 -->
+    <div id="screen-lottery" class="screen">
+        <button class="btn-secondary" onclick="goToRosterScreen()">⬅ 名簿選択に戻る</button>
+        
+        <div class="lottery-box">
+            <div class="settings-info">
+                <span id="settings-summary">設定：被りなし / 1人抽選</span>
+                <span id="remaining-count-badge" style="font-weight: bold; color: var(--primary-color);">残り候補: 5人</span>
+            </div>
+            <p style="margin: 0; color: #64748b;">抽選中...</p>
+            <div id="roulette-display">準備完了</div>
+            <button class="btn-primary" id="lottery-btn" onclick="startLottery()">抽選スタート！</button>
+        </div>
+
+        <div class="history-section">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <h3 style="margin: 0;">抽選結果の一覧（履歴）</h3>
+                <button class="btn-text" style="font-size: 12px;" onclick="clearHistory()">履歴リセット</button>
+            </div>
+            <div class="history-list" id="history-container">
+                <div style="color: #94a3b8; text-align: center; padding: 10px;">まだ抽選履歴はありません</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ハンバーガーメニュー -->
+<div id="drawer-overlay" class="drawer-overlay" onclick="toggleDrawer(false)"></div>
+<div id="settings-drawer" class="drawer">
+    <div class="drawer-header">
+        <h2>抽選設定</h2>
+        <button class="close-drawer" onclick="toggleDrawer(false)">✕</button>
+    </div>
+
+    <div class="setting-item">
+        <div>
+            <label>抽選人数</label>
+            <div class="setting-sub" id="max-hint">一度に選ぶ人数</div>
+        </div>
+        <input type="number" id="draw-count-input" class="input-count" value="1" min="1" onchange="updateSettings()" oninput="updateSettings()">
+    </div>
+
+    <div class="setting-item">
+        <div>
+            <label>当選者を次回から除外</label>
+            <div class="setting-sub">ONにすると一度当選した人が次回から出なくなります</div>
+        </div>
+        <label class="switch">
+            <input type="checkbox" id="toggle-exclude-won" onchange="updateSettings()">
+            <span class="slider"></span>
+        </label>
+    </div>
+</div>
+
+<!-- ポップアップ結果モーダル -->
+<div id="result-modal" class="modal-overlay">
+    <div class="modal-card">
+        <h3>🎉 抽選結果 🎉</h3>
+        <div class="modal-result" id="modal-result-text">山田 太郎</div>
+        <button class="btn-primary" onclick="closeModal()">OK</button>
+    </div>
+</div>
+
+<script>
+    let members = [
+        { id: 1, name: "井芹 佑", exclude: false, won: false },
+        { id: 2, name: "市野 楓", exclude: false, won: false },
+        { id: 3, name: "伊藤 美結", exclude: false, won: false },
+        { id: 4, name: "大石 みづき", exclude: false, won: false },
+        { id: 5, name: "大髙 綾香", exclude: false, won: false },
+        { id: 6, name: "大𣘺 璃子", exclude: false, won: false },
+        { id: 7, name: "髙野 采花", exclude: false, won: false },
+        { id: 8, name: "髙野 桜子", exclude: false, won: false },
+        { id: 9, name: "内藤 倖那", exclude: false, won: false },
+        { id: 10, name: "名倉 綾花", exclude: false, won: false },
+        { id: 11, name: "平野 紗也佳", exclude: false, won: false },
+        { id: 12, name: "本多 あゆみ", exclude: false, won: false },
+        { id: 13, name: "村松 明", exclude: false, won: false },
+        { id: 14, name: "青島 真生斗", exclude: false, won: false },
+        { id: 15, name: "池田 匠杜", exclude: false, won: false },
+        { id: 16, name: "市川 煌稀", exclude: false, won: false },
+        { id: 17, name: "内山 慈温", exclude: false, won: false },
+        { id: 18, name: "遠藤 瑞基", exclude: false, won: false },
+        { id: 19, name: "岡部 世羅", exclude: false, won: false },
+        { id: 20, name: "小杉 宙杜", exclude: false, won: false },
+        { id: 21, name: "齋藤 奏", exclude: false, won: false },
+        { id: 22, name: "島本 隼", exclude: false, won: false },
+        { id: 23, name: "鈴木 壽", exclude: false, won: false },
+        { id: 24, name: "鈴木 聖来", exclude: false, won: false },
+        { id: 25, name: "鈴木 大翔", exclude: false, won: false },
+        { id: 26, name: "鈴木 千晴", exclude: false, won: false },
+        { id: 27, name: "鈴木 悠斗", exclude: false, won: false },
+        { id: 28, name: "多田 一翔", exclude: false, won: false },
+        { id: 29, name: "田邊 蒼麿", exclude: false, won: false },
+        { id: 30, name: "手嶋 諒", exclude: false, won: false },
+        { id: 31, name: "林 典杜", exclude: false, won: false },
+        { id: 32, name: "藤野 佑之介", exclude: false, won: false },
+        { id: 33, name: "本郷 航大", exclude: false, won: false },
+        { id: 34, name: "森近 太一", exclude: false, won: false },
+        { id: 35, name: "柳本 逞", exclude: false, won: false },
+        { id: 36, name: "大和谷 瞭", exclude: false, won: false }
+    ];
+
+    let lotteryHistory = [];
+    let isRolling = false;
+
+    window.onload = function() {
+        renderRosterTable();
+        updateSettings();
+    };
+
+    function renderRosterTable() {
+        members.forEach(m => m.won = false);
+
+        const tbody = document.getElementById('roster-tbody');
+        tbody.innerHTML = '';
+
+        members.forEach((m, index) => {
+            const tr = document.createElement('tr');
+            if (m.exclude) {
+                tr.classList.add('exclude-row');
+            }
+
+            tr.innerHTML = `
+                <td style="text-align: center;">
+                    <input type="checkbox" ${m.exclude ? 'checked' : ''} onchange="toggleExclude(${index}, this)">
+                </td>
+                <td>${m.name}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        updateActiveCount();
+    }
+
+    function toggleExclude(index, checkbox) {
+        members[index].exclude = checkbox.checked;
+        renderRosterTable();
+        updateActiveCount();
+        updateSettings();
+    }
+
+    function updateActiveCount() {
+        const activeCount = members.filter(m => !m.exclude).length;
+        document.getElementById('active-count').textContent = `有効な候補者: ${activeCount}人`;
+        document.getElementById('total-count').textContent = `全${members.length}人`;
+    }
+
+    function selectAll(excludeState) {
+        members.forEach(m => m.exclude = excludeState);
+        renderRosterTable();
+        updateSettings();
+    }
+
+    function goToLotteryScreen() {
+        const candidates = members.filter(m => !m.exclude);
+        const drawCount = parseInt(document.getElementById('draw-count-input').value) || 1;
+
+        if (candidates.length === 0) {
+            alert('有効な候補者が1人もいません！名簿画面で除外チェックを外してください。');
+            return;
+        }
+
+        if (drawCount > candidates.length) {
+            alert(`抽選人数(${drawCount}人)が、有効な候補者数(${candidates.length}人)より多くなっています！`);
+            return;
+        }
+
+        document.getElementById('screen-roster').classList.remove('active');
+        document.getElementById('screen-lottery').classList.add('active');
+        document.getElementById('header-title').textContent = '抽選画面';
+        updateLotteryScreenState();
+    }
+
+    function goToRosterScreen() {
+        if (isRolling) return;
+        document.getElementById('screen-lottery').classList.remove('active');
+        document.getElementById('screen-roster').classList.add('active');
+        document.getElementById('header-title').textContent = '名簿選択（抽選準備）';
+        renderRosterTable();
+    }
+
+    function toggleDrawer(open) {
+        const drawer = document.getElementById('settings-drawer');
+        const overlay = document.getElementById('drawer-overlay');
+        if (open) {
+            drawer.classList.add('open');
+            overlay.style.display = 'block';
+        } else {
+            drawer.classList.remove('open');
+            overlay.style.display = 'none';
+        }
+    }
+
+    function updateSettings() {
+        const activeCandidatesCount = members.filter(m => !m.exclude).length;
+        const inputElem = document.getElementById('draw-count-input');
+        
+        inputElem.max = activeCandidatesCount > 0 ? activeCandidatesCount : 1;
+
+        let drawCount = parseInt(inputElem.value);
+        if (isNaN(drawCount) || drawCount < 1) {
+            drawCount = 1;
+        }
+
+        if (activeCandidatesCount > 0 && drawCount > activeCandidatesCount) {
+            drawCount = activeCandidatesCount;
+            inputElem.value = drawCount;
+        }
+
+        document.getElementById('max-hint').textContent = `一度に選ぶ人数 (上限: ${activeCandidatesCount}人)`;
+
+        const excludeWon = document.getElementById('toggle-exclude-won').checked;
+
+        let summary = `設定：`;
+        if (excludeWon) {
+            summary += `完全被りなし（当選者除外） / ${drawCount}人抽選`;
+        } else {
+            summary += `通常抽選（回またぎ重複あり） / ${drawCount}人抽選`;
+        }
+        document.getElementById('settings-summary').textContent = summary;
+        updateLotteryScreenState();
+    }
+
+    function updateLotteryScreenState() {
+        const excludeWon = document.getElementById('toggle-exclude-won').checked;
+        const activeCandidatesCount = members.filter(m => !m.exclude).length;
+        let drawCount = parseInt(document.getElementById('draw-count-input').value);
+        if (isNaN(drawCount) || drawCount < 1) drawCount = 1;
+
+        const btn = document.getElementById('lottery-btn');
+        const badge = document.getElementById('remaining-count-badge');
+        const display = document.getElementById('roulette-display');
+
+        if (!excludeWon) {
+            badge.textContent = `通常モード (何度でも当選可)`;
+            btn.disabled = false;
+            btn.textContent = "抽選スタート！";
+            btn.style.backgroundColor = "var(--primary-color)";
+        } else {
+            const remainingPool = members.filter(m => !m.exclude && !m.won);
+            badge.textContent = `残り候補: ${remainingPool.length}人`;
+
+            if (remainingPool.length === 0) {
+                btn.disabled = true;
+                btn.textContent = "メンバーがいません（全員当選済み）";
+                btn.style.backgroundColor = "#cbd5e1";
+                display.textContent = "終了";
+            } else if (remainingPool.length < drawCount) {
+                btn.disabled = true;
+                btn.textContent = `候補者が不足しています（残り${remainingPool.length}人）`;
+                btn.style.backgroundColor = "#cbd5e1";
+            } else {
+                btn.disabled = false;
+                btn.textContent = "抽選スタート！";
+                btn.style.backgroundColor = "var(--primary-color)";
+                if (display.textContent.includes("メンバーがいません") || display.textContent === "終了") {
+                    display.textContent = "準備完了";
+                }
+            }
+        }
+    }
+
+    function startLottery() {
+        if (isRolling) return;
+
+        let drawCount = parseInt(document.getElementById('draw-count-input').value);
+        if (isNaN(drawCount) || drawCount < 1) drawCount = 1;
+
+        const excludeWon = document.getElementById('toggle-exclude-won').checked;
+
+        let candidatesPool = excludeWon ? members.filter(m => !m.exclude && !m.won) : members.filter(m => !m.exclude);
+        let candidates = candidatesPool.map(m => m.name);
+
+        if (candidates.length === 0 && excludeWon) {
+            alert('メンバーがいません！');
+            return;
+        }
+
+        if (candidates.length < drawCount) {
+            alert(`有効な候補者(${candidates.length}人)が、抽選人数(${drawCount}人)より少なくなっています！`);
+            return;
+        }
+
+        isRolling = true;
+        document.getElementById('lottery-btn').disabled = true;
+        const display = document.getElementById('roulette-display');
+
+        let count = 0;
+        const maxCount = 25;
+
+        const timer = setInterval(() => {
+            let tempDisplay = [];
+            let tempPool = [...candidates];
+            for (let i = 0; i < drawCount; i++) {
+                if (tempPool.length === 0) break;
+                const randIndex = Math.floor(Math.random() * tempPool.length);
+                tempDisplay.push(tempPool.splice(randIndex, 1)[0]);
+            }
+            display.textContent = tempDisplay.join('、');
+            count++;
+
+            if (count >= maxCount) {
+                clearInterval(timer);
+                
+                let pool = [...candidates];
+                let winners = [];
+                let winnersIndices = [];
+
+                for (let i = 0; i < drawCount; i++) {
+                    const index = Math.floor(Math.random() * pool.length);
+                    const winnerName = pool.splice(index, 1)[0];
+                    winners.push(winnerName);
+                    winnersIndices.push(members.findIndex(m => m.name === winnerName));
+                }
+
+                // ポップアップ用：2人ずつで改行して見やすくする
+                let modalTextHtml = "";
+                for (let i = 0; i < winners.length; i += 2) {
+                    const chunk = winners.slice(i, i + 2).join('、');
+                    modalTextHtml += `<div>${chunk}</div>`;
+                }
+
+                const resultText = winners.join('、');
+                display.textContent = resultText;
+
+                if (excludeWon) {
+                    winnersIndices.forEach(idx => {
+                        if (idx !== -1) members[idx].won = true;
+                    });
+                }
+
+                showModal(modalTextHtml);
+                addHistory(resultText);
+
+                isRolling = false;
+                updateLotteryScreenState();
+            }
+        }, 80);
+    }
+
+    function showModal(htmlContent) {
+        document.getElementById('modal-result-text').innerHTML = htmlContent;
+        document.getElementById('result-modal').style.display = 'flex';
+    }
+
+    function closeModal() {
+        document.getElementById('result-modal').style.display = 'none';
+    }
+
+    function addHistory(resultText) {
+        lotteryHistory.unshift({ time: new Date().toLocaleTimeString(), text: resultText });
+        
+        const container = document.getElementById('history-container');
+        container.innerHTML = '';
+
+        lotteryHistory.forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'history-item';
+            div.innerHTML = `<span style="color: #94a3b8; font-size: 11px;">[${item.time}]</span> <b>${item.text}</b>`;
+            container.appendChild(div);
+        });
+    }
+
+    function clearHistory() {
+        lotteryHistory = [];
+        document.getElementById('history-container').innerHTML = '<div style="color: #94a3b8; text-align: center; padding: 10px;">まだ抽選履歴はありません</div>';
+        
+        members.forEach(m => m.won = false);
+        updateLotteryScreenState();
+        document.getElementById('roulette-display').textContent = "準備完了";
+    }
+</script>
+
+</body>
+</html>
